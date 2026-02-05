@@ -164,7 +164,7 @@ function broadcast(code) {
       const slug = m.activeTimer.slug;
       timeSpent[slug] = (timeSpent[slug] || 0) + (now - m.activeTimer.start);
     }
-    return { name: m.name, problem: m.problem, problemSlug: m.problemSlug, status: m.status, progress: m.progress, timeSpent };
+    return { name: m.name, problem: m.problem, problemSlug: m.problemSlug, status: m.status, progress: m.progress, timeSpent, activeSlug: m.activeTimer?.slug || null };
   });
   for (const [ws, c] of clients) {
     if (c.room === code) send(ws, { type: 'room-state', members, settings: room.settings });

@@ -2,6 +2,7 @@
   if (window !== window.top) return;
 
   let state = { code: null, name: null, members: [], settings: null };
+  let stateReceivedAt = 0;
   let collapsed = false;
   let currentProblem = null;
   let reportedSub = null;
@@ -104,6 +105,7 @@
       sendUpdate();
     }
     checkAccepted();
+    updateTooltips();
 
     const now = Date.now();
     if (state.code && now - lastStateRefresh > 5000) {
@@ -112,6 +114,7 @@
         if (chrome.runtime.lastError) return;
         if (s && JSON.stringify(s.members) !== JSON.stringify(state.members)) {
           state = s;
+          stateReceivedAt = Date.now();
           render();
         }
       });
@@ -122,7 +125,7 @@
 
   chrome.runtime.sendMessage({ action: 'get-state' }, (s) => {
     if (chrome.runtime.lastError) return;
-    if (s) state = s;
+    if (s) { state = s; stateReceivedAt = Date.now(); }
     currentProblem = getProblem();
     if (state.code) sendUpdate();
     render();
@@ -134,6 +137,7 @@
     if (msg.type === 'room-state') {
       const wasInRoom = !!state.code;
       state = msg;
+      stateReceivedAt = Date.now();
       render();
       if (!wasInRoom && state.code) {
         sendUpdate();
@@ -224,6 +228,22 @@
     return h + 'h ' + (rm ? rm + 'm' : '');
   }
 
+  function updateTooltips() {
+    if (!state.members || !stateReceivedAt) return;
+    const elapsed = Date.now() - stateReceivedAt;
+    state.members.forEach((m) => {
+      if (!m.activeSlug) return;
+      const cell = panel.querySelector(`.lct-grid-cell[data-member="${m.name}"][data-slug="${m.activeSlug}"]`);
+      if (!cell) return;
+      const baseMs = m.timeSpent?.[m.activeSlug] || 0;
+      const time = formatTime(baseMs + elapsed);
+      if (time) {
+        cell.classList.add('has-tooltip');
+        cell.dataset.tooltip = time;
+      }
+    });
+  }
+
   function renderPanelProblems() {
     const problems = state.settings?.problems;
     if (!problems?.length) return '';
@@ -254,9 +274,12 @@
         if (status === 'accepted') icon = ICON_ACCEPTED;
         else if (status === 'solving') icon = ICON_SOLVING;
         else icon = ICON_IDLE;
-        const time = formatTime(m.timeSpent?.[p.titleSlug]);
+        const baseMs = m.timeSpent?.[p.titleSlug] || 0;
+        const isActive = m.activeSlug === p.titleSlug;
+        const liveMs = baseMs + (isActive ? Date.now() - stateReceivedAt : 0);
+        const time = formatTime(liveMs);
         const tooltip = time ? ` data-tooltip="${time}"` : '';
-        cells += `<span class="lct-grid-cell${time ? ' has-tooltip' : ''}"${tooltip}>${icon}</span>`;
+        cells += `<span class="lct-grid-cell${time ? ' has-tooltip' : ''}"${tooltip} data-member="${m.name}" data-slug="${p.titleSlug}">${icon}</span>`;
       });
       rows += `<div class="lct-grid-row">` +
         `<span class="lct-grid-name ${you ? 'you' : ''}">${m.name}</span>` +

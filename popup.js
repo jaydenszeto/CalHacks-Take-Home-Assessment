@@ -18,6 +18,10 @@ function formatTime(ms) {
   return h + 'h ' + (rm ? rm + 'm' : '');
 }
 
+// track last state for live tooltip updates
+let lastState = null;
+let stateReceivedAt = 0;
+
 // chip labels for display in room view
 const topicLabels = {};
 $$('#topic-chips .chip').forEach((el) => {
@@ -79,6 +83,9 @@ function showRoom(state) {
   $('#head-code').textContent = 'Room ' + state.code;
   $('#leave-btn').hidden = false;
 
+  lastState = state;
+  stateReceivedAt = Date.now();
+
   renderTags(state.settings);
   renderProblems(state.settings?.problems);
   renderMembers(state.members || [], state.name, state.settings?.problems);
@@ -87,12 +94,31 @@ function showRoom(state) {
 function showLobby() {
   $('#lobby').hidden = false;
   $('#room').hidden = true;
+  lastState = null;
 
   // header switches back to title
   $('#head-title').hidden = false;
   $('#head-code').hidden = true;
   $('#leave-btn').hidden = true;
 }
+
+// Update tooltips every second for active timers
+setInterval(() => {
+  if (!lastState?.members) return;
+  const now = Date.now();
+  const elapsed = now - stateReceivedAt;
+  lastState.members.forEach((m) => {
+    if (!m.activeSlug) return;
+    const cell = document.querySelector(`.progress-cell[data-member="${m.name}"][data-slug="${m.activeSlug}"]`);
+    if (!cell) return;
+    const baseMs = m.timeSpent?.[m.activeSlug] || 0;
+    const time = formatTime(baseMs + elapsed);
+    if (time) {
+      cell.classList.add('has-tooltip');
+      cell.dataset.tooltip = time;
+    }
+  });
+}, 1000);
 
 function showError(message) {
   const el = $('#error');
@@ -155,9 +181,12 @@ function renderMembers(members, myName, problems) {
           if (status === 'accepted') icon = ICON_ACCEPTED;
           else if (status === 'solving') icon = ICON_SOLVING;
           else icon = ICON_IDLE;
-          const time = formatTime(m.timeSpent?.[p.titleSlug]);
+          const baseMs = m.timeSpent?.[p.titleSlug] || 0;
+          const isActive = m.activeSlug === p.titleSlug;
+          const liveMs = baseMs + (isActive ? Date.now() - stateReceivedAt : 0);
+          const time = formatTime(liveMs);
           const tooltip = time ? ` data-tooltip="${time}"` : '';
-          cells += `<span class="progress-cell${time ? ' has-tooltip' : ''}"${tooltip}>${icon}</span>`;
+          cells += `<span class="progress-cell${time ? ' has-tooltip' : ''}"${tooltip} data-member="${m.name}" data-slug="${p.titleSlug}">${icon}</span>`;
         });
         return `<div class="progress-row">` +
           `<span class="progress-name ${you ? 'you' : ''}">${m.name}</span>` +
