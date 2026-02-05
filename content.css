@@ -1,5 +1,3 @@
-/* LeetCode Together - floating panel injected on leetcode.com */
-
 #lct-panel {
   position: fixed;
   bottom: 20px;
@@ -22,7 +20,6 @@
   padding: 0;
 }
 
-/* header bar */
 #lct-panel .lct-head {
   display: flex;
   justify-content: space-between;
@@ -49,7 +46,6 @@
   transform: rotate(180deg);
 }
 
-/* body */
 #lct-panel .lct-body {
   padding: 8px 12px;
 }
@@ -65,7 +61,6 @@
   font-size: 12px;
 }
 
-/* member rows */
 #lct-panel .lct-row {
   display: flex;
   justify-content: space-between;
@@ -105,4 +100,8 @@
 
 #lct-panel .lct-status.accepted {
   color: #2cbb5d;
+}
+
+#lct-panel .lct-status.idle {
+  color: #666;
 }

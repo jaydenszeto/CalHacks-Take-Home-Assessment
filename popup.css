@@ -22,6 +22,17 @@ h1 {
   margin-bottom: 16px;
 }
 
+/* --- Error banner --- */
+
+#error {
+  background: rgba(239, 71, 67, 0.15);
+  color: #ef4743;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+
 /* --- Form fields --- */
 
 .field {
@@ -186,4 +197,8 @@ h1 {
 .status.accepted {
   color: #2cbb5d;
   background: rgba(44, 187, 93, 0.1);
+}
+
+.status.idle {
+  color: #666;
 }
