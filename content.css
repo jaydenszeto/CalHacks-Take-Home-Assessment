@@ -102,6 +102,10 @@
   color: #2cbb5d;
 }
 
+#lct-panel .lct-status.browsing {
+  color: #5b8def;
+}
+
 #lct-panel .lct-status.idle {
   color: #666;
 }

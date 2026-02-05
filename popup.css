@@ -317,4 +317,5 @@ body {
 
 .member-status.solving { color: #ffc01e; }
 .member-status.accepted { color: #2cbb5d; }
+.member-status.browsing { color: #5b8def; }
 .member-status.idle { color: #666; }

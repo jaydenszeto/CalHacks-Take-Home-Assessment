@@ -5,8 +5,9 @@
   let collapsed = false;
   let currentProblem = null;
   let reportedSub = null;
+  let acceptedProblem = null;
 
-  // --- problem detection ---
+  // --- problem & page detection ---
 
   function getProblem() {
     const m = location.pathname.match(/\/problems\/([^/]+)/);
@@ -14,13 +15,27 @@
     return m[1].split('-').map((w) => w[0].toUpperCase() + w.slice(1)).join(' ');
   }
 
-  function sendProblem(problem) {
+  function getPageInfo() {
+    const path = location.pathname;
+    if (path.startsWith('/problemset')) return 'Problem List';
+    if (path.startsWith('/contest')) return 'Contests';
+    if (path.startsWith('/discuss')) return 'Discussion';
+    if (path.startsWith('/explore')) return 'Explore';
+    if (path === '/' || path === '') return 'Home';
+    return 'Browsing';
+  }
+
+  function sendUpdate() {
     if (!state.code) return;
-    chrome.runtime.sendMessage({
-      action: 'update',
-      problem: problem,
-      status: problem ? 'solving' : 'idle',
-    });
+    const problem = getProblem();
+    if (problem) {
+      // Don't downgrade from 'accepted' back to 'solving' for the same problem
+      const status = (acceptedProblem === problem) ? 'accepted' : 'solving';
+      chrome.runtime.sendMessage({ action: 'update', problem, status });
+    } else {
+      acceptedProblem = null;
+      chrome.runtime.sendMessage({ action: 'update', problem: getPageInfo(), status: 'browsing' });
+    }
   }
 
   // --- submission detection (DOM-based) ---
@@ -28,12 +43,29 @@
   // accepted submissions by watching the page content on /submissions/ URLs
 
   function checkAccepted() {
+    // Method 1: submission URL with numeric ID (e.g. /submissions/12345/)
     const m = location.pathname.match(/\/submissions\/(\d+)/);
-    if (!m || m[1] === reportedSub) return;
+    if (m && m[1] !== reportedSub) {
+      const text = document.body.innerText;
+      if (text.includes('Accepted') && text.includes('testcases passed')) {
+        reportedSub = m[1];
+        acceptedProblem = getProblem();
+        if (state.code) {
+          chrome.runtime.sendMessage({ action: 'update', status: 'accepted' });
+        }
+        return;
+      }
+    }
+
+    // Method 2: detect acceptance on the problem page itself
+    // (modern LeetCode shows results inline without a submission ID in the URL)
+    const problem = getProblem();
+    if (!problem || problem === acceptedProblem) return;
 
     const text = document.body.innerText;
     if (text.includes('Accepted') && text.includes('testcases passed')) {
-      reportedSub = m[1];
+      acceptedProblem = problem;
+      reportedSub = 'dom-' + problem;
       if (state.code) {
         chrome.runtime.sendMessage({ action: 'update', status: 'accepted' });
       }
@@ -62,11 +94,12 @@
     if (url !== lastUrl) {
       lastUrl = url;
       reportedSub = null;
-      const p = getProblem();
-      if (p !== currentProblem) {
-        currentProblem = p;
-        sendProblem(p);
+      const newProblem = getProblem();
+      if (newProblem !== currentProblem) {
+        acceptedProblem = null;
       }
+      currentProblem = newProblem;
+      sendUpdate();
     }
     checkAccepted();
   }, 1000);
@@ -77,10 +110,7 @@
     if (chrome.runtime.lastError) return;
     if (s) state = s;
     currentProblem = getProblem();
-    // if already in a room, immediately report what problem we're on
-    if (state.code && currentProblem) {
-      sendProblem(currentProblem);
-    }
+    if (state.code) sendUpdate();
     render();
   });
 
@@ -91,9 +121,9 @@
       const wasInRoom = !!state.code;
       state = msg;
       render();
-      // just joined? tell the server what problem we're on
-      if (!wasInRoom && state.code && currentProblem) {
-        sendProblem(currentProblem);
+      // just joined? tell the server where we are
+      if (!wasInRoom && state.code) {
+        sendUpdate();
       }
     }
   });
@@ -130,7 +160,8 @@
           const you = m.name === state.name;
           const label =
             m.status === 'accepted' ? 'Accepted' :
-            m.status === 'solving' ? 'Solving...' : 'Idle';
+            m.status === 'solving' ? 'Solving...' :
+            m.status === 'browsing' ? 'Browsing' : 'Idle';
           return `
           <div class="lct-row">
             <span class="lct-name ${you ? 'you' : ''}">${m.name}</span>

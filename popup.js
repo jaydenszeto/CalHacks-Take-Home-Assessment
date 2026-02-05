@@ -131,7 +131,8 @@ function renderMembers(members, myName) {
       const you = m.name === myName;
       const label =
         m.status === 'accepted' ? 'Accepted' :
-        m.status === 'solving' ? 'Solving...' : 'Idle';
+        m.status === 'solving' ? 'Solving...' :
+        m.status === 'browsing' ? 'Browsing' : 'Idle';
       return `
       <div class="member-row">
         <span class="member-name ${you ? 'you' : ''}">${m.name}</span>
