@@ -229,6 +229,57 @@ body {
 .tag.medium { color: #ffc01e; background: rgba(255, 192, 30, 0.1); }
 .tag.hard { color: #ef4743; background: rgba(239, 71, 67, 0.1); }
 
+/* --- Problems list --- */
+
+#room-problems {
+  margin-bottom: 10px;
+  border-bottom: 1px solid #333;
+  padding-bottom: 8px;
+}
+
+.problems-title {
+  font-size: 10px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.problem-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  border-radius: 4px;
+  text-decoration: none;
+  color: #eff1f6;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.problem-row:hover {
+  background: #333;
+}
+
+.problem-diff {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.problem-diff.easy { color: #2cbb5d; background: rgba(44, 187, 93, 0.15); }
+.problem-diff.medium { color: #ffc01e; background: rgba(255, 192, 30, 0.15); }
+.problem-diff.hard { color: #ef4743; background: rgba(239, 71, 67, 0.15); }
+
+.problem-name {
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* --- Member rows (same layout as the injected panel) --- */
 
 .member-row {

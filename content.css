@@ -105,3 +105,54 @@
 #lct-panel .lct-status.idle {
   color: #666;
 }
+
+/* --- Problems in panel --- */
+
+#lct-panel .lct-problems {
+  margin-bottom: 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #333;
+}
+
+#lct-panel .lct-problems-title {
+  font-size: 10px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+#lct-panel .lct-prob-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px;
+  border-radius: 4px;
+  text-decoration: none;
+  color: #eff1f6;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+#lct-panel .lct-prob-row:hover {
+  background: #333;
+}
+
+#lct-panel .lct-prob-diff {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+#lct-panel .lct-prob-diff.easy { color: #2cbb5d; background: rgba(44, 187, 93, 0.15); }
+#lct-panel .lct-prob-diff.medium { color: #ffc01e; background: rgba(255, 192, 30, 0.15); }
+#lct-panel .lct-prob-diff.hard { color: #ef4743; background: rgba(239, 71, 67, 0.15); }
+
+#lct-panel .lct-prob-name {
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

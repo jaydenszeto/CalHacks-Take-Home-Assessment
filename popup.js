@@ -63,6 +63,7 @@ function showRoom(state) {
   $('#leave-btn').hidden = false;
 
   renderTags(state.settings);
+  renderProblems(state.settings?.problems);
   renderMembers(state.members || [], state.name);
 }
 
@@ -97,6 +98,31 @@ function renderTags(settings) {
 
   el.innerHTML = html;
   el.hidden = !html;
+}
+
+function renderProblems(problems) {
+  const el = $('#room-problems');
+  if (!problems?.length) { el.hidden = true; return; }
+
+  el.innerHTML = '<div class="problems-title">Problems</div>' +
+    problems.map((p) => {
+      const diff = (p.difficulty || '').toLowerCase();
+      const url = `https://leetcode.com/problems/${p.titleSlug}/`;
+      return `
+      <a class="problem-row" href="${url}" data-url="${url}">
+        <span class="problem-diff ${diff}">${p.difficulty}</span>
+        <span class="problem-name">${p.title}</span>
+      </a>`;
+    }).join('');
+
+  el.hidden = false;
+
+  el.querySelectorAll('.problem-row').forEach((row) => {
+    row.onclick = (e) => {
+      e.preventDefault();
+      chrome.tabs.create({ url: row.dataset.url });
+    };
+  });
 }
 
 function renderMembers(members, myName) {

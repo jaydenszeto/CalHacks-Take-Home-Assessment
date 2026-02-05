@@ -1,7 +1,7 @@
 (function () {
   if (window !== window.top) return;
 
-  let state = { code: null, name: null, members: [] };
+  let state = { code: null, name: null, members: [], settings: null };
   let collapsed = false;
   let currentProblem = null;
   let reportedSub = null;
@@ -104,13 +104,28 @@
   panel.id = 'lct-panel';
   document.body.appendChild(panel);
 
+  function renderPanelProblems() {
+    const problems = state.settings?.problems;
+    if (!problems?.length) return '';
+    return '<div class="lct-problems">' +
+      '<div class="lct-problems-title">Problems</div>' +
+      problems.map((p) => {
+        const diff = (p.difficulty || '').toLowerCase();
+        const url = `https://leetcode.com/problems/${p.titleSlug}/`;
+        return `<a class="lct-prob-row" href="${url}">` +
+          `<span class="lct-prob-diff ${diff}">${p.difficulty}</span>` +
+          `<span class="lct-prob-name">${p.title}</span></a>`;
+      }).join('') +
+      '</div>';
+  }
+
   function render() {
     let rows = '';
 
     if (!state.code) {
       rows = '<div class="lct-empty">Open the extension to join a room</div>';
     } else {
-      rows = (state.members || [])
+      rows = renderPanelProblems() + (state.members || [])
         .map((m) => {
           const you = m.name === state.name;
           const label =

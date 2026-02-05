@@ -1,10 +1,103 @@
 // --- CONFIG ---
 // For local dev: 'ws://localhost:3000'
 // For production: 'wss://your-app.onrender.com'
-const SERVER = 'ws://localhost:3000';
+// For local dev: 'ws://localhost:3000'
+// For production: replace with your Render URL
+const SERVER = 'wss://calhacks-take-home-assessment.onrender.com';
 
 let ws = null;
 let state = { code: null, name: null, members: [], settings: null };
+
+// --- LeetCode problem fetching ---
+
+const TOPIC_SLUG_MAP = { heap: 'heap-priority-queue' };
+
+function toApiSlug(topic) {
+  if (TOPIC_SLUG_MAP[topic]) return TOPIC_SLUG_MAP[topic];
+  return topic.replace(/_/g, '-');
+}
+
+async function fetchProblems(settings) {
+  try {
+    const cookie = await chrome.cookies.get({ url: 'https://leetcode.com', name: 'csrftoken' });
+    const csrf = cookie?.value || '';
+
+    const difficulties = (settings.difficulty || []).map(d => d.toUpperCase());
+    const topics = (settings.topics || []).map(toApiSlug);
+
+    // questionList filter only accepts a single difficulty string
+    const filters = {};
+    if (difficulties.length === 1) filters.difficulty = difficulties[0];
+    if (topics.length) filters.tags = topics;
+
+    const query = `
+      query problemsetQuestionList($categorySlug: String, $limit: Int, $skip: Int, $filters: QuestionListFilterInput) {
+        problemsetQuestionList: questionList(
+          categorySlug: $categorySlug
+          limit: $limit
+          skip: $skip
+          filters: $filters
+        ) {
+          total: totalNum
+          questions: data {
+            title
+            titleSlug
+            difficulty
+            isPaidOnly
+            status
+          }
+        }
+      }
+    `;
+
+    const resp = await fetch('https://leetcode.com/graphql/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-csrftoken': csrf,
+      },
+      body: JSON.stringify({
+        query,
+        variables: { categorySlug: '', limit: 50, skip: 0, filters },
+      }),
+    });
+
+    if (!resp.ok) return [];
+
+    const data = await resp.json();
+    let questions = data?.data?.problemsetQuestionList?.questions || [];
+
+    // Filter out premium and solved
+    questions = questions.filter(q => !q.isPaidOnly && q.status !== 'ac');
+
+    // If multiple difficulties selected, filter client-side
+    if (difficulties.length > 1) {
+      questions = questions.filter(q =>
+        difficulties.includes((q.difficulty || '').toUpperCase())
+      );
+    }
+
+    if (questions.length === 0) return [];
+
+    // Pick up to 3 random problems
+    const picked = [];
+    const pool = [...questions];
+    const count = Math.min(3, pool.length);
+    for (let i = 0; i < count; i++) {
+      const idx = Math.floor(Math.random() * pool.length);
+      picked.push(pool.splice(idx, 1)[0]);
+    }
+
+    return picked.map(q => ({
+      title: q.title,
+      titleSlug: q.titleSlug,
+      difficulty: q.difficulty,
+    }));
+  } catch (e) {
+    console.error('fetchProblems failed:', e);
+    return [];
+  }
+}
 
 function send(obj) {
   if (ws?.readyState === 1) ws.send(JSON.stringify(obj));
@@ -69,7 +162,11 @@ chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
 
   if (msg.action === 'create') {
     state.name = msg.name;
-    connectWS(() => send({ type: 'create', name: msg.name, settings: msg.settings }));
+    const settings = msg.settings || { difficulty: [], topics: [] };
+    fetchProblems(settings).then((problems) => {
+      settings.problems = problems;
+      connectWS(() => send({ type: 'create', name: msg.name, settings }));
+    });
   }
 
   if (msg.action === 'join') {
