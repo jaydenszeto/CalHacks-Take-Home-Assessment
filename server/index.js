@@ -6,7 +6,7 @@ const app = express();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
-// room code -> Map<clientId, { name, problem, status }>
+// room code -> { settings, members: Map<clientId, { name, problem, status }> }
 const rooms = new Map();
 // ws -> { id, room, name }
 const clients = new Map();
@@ -50,8 +50,12 @@ function onMessage(ws, msg) {
     const code = makeCode();
     client.name = msg.name;
     client.room = code;
-    rooms.set(code, new Map([[client.id, { name: msg.name, problem: null, status: 'idle' }]]));
-    send(ws, { type: 'joined', code });
+    const settings = msg.settings || { difficulty: [], topics: [] };
+    rooms.set(code, {
+      settings,
+      members: new Map([[client.id, { name: msg.name, problem: null, status: 'idle' }]]),
+    });
+    send(ws, { type: 'joined', code, settings });
     broadcast(code);
   }
 
@@ -62,8 +66,8 @@ function onMessage(ws, msg) {
     leave(ws);
     client.name = msg.name;
     client.room = code;
-    room.set(client.id, { name: msg.name, problem: null, status: 'idle' });
-    send(ws, { type: 'joined', code });
+    room.members.set(client.id, { name: msg.name, problem: null, status: 'idle' });
+    send(ws, { type: 'joined', code, settings: room.settings });
     broadcast(code);
   }
 
@@ -76,7 +80,7 @@ function onMessage(ws, msg) {
     if (!client.room) return;
     const room = rooms.get(client.room);
     if (!room) return;
-    const member = room.get(client.id);
+    const member = room.members.get(client.id);
     if (!member) return;
     if (msg.problem !== undefined) member.problem = msg.problem;
     if (msg.status !== undefined) member.status = msg.status;
@@ -91,17 +95,17 @@ function leave(ws) {
   const room = rooms.get(code);
   client.room = null;
   if (!room) return;
-  room.delete(client.id);
-  if (room.size === 0) rooms.delete(code);
+  room.members.delete(client.id);
+  if (room.members.size === 0) rooms.delete(code);
   else broadcast(code);
 }
 
 function broadcast(code) {
   const room = rooms.get(code);
   if (!room) return;
-  const members = [...room.values()];
+  const members = [...room.members.values()];
   for (const [ws, c] of clients) {
-    if (c.room === code) send(ws, { type: 'room-state', members });
+    if (c.room === code) send(ws, { type: 'room-state', members, settings: room.settings });
   }
 }
 

@@ -4,7 +4,7 @@
 const SERVER = 'ws://localhost:3000';
 
 let ws = null;
-let state = { code: null, name: null, members: [] };
+let state = { code: null, name: null, members: [], settings: null };
 
 function send(obj) {
   if (ws?.readyState === 1) ws.send(JSON.stringify(obj));
@@ -39,9 +39,11 @@ function connectWS(then) {
 
     if (msg.type === 'joined') {
       state.code = msg.code;
+      state.settings = msg.settings || null;
       saveState();
     } else if (msg.type === 'room-state') {
       state.members = msg.members;
+      if (msg.settings) state.settings = msg.settings;
       saveState();
     } else if (msg.type === 'error') {
       sendError(msg.message);
@@ -67,7 +69,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
 
   if (msg.action === 'create') {
     state.name = msg.name;
-    connectWS(() => send({ type: 'create', name: msg.name }));
+    connectWS(() => send({ type: 'create', name: msg.name, settings: msg.settings }));
   }
 
   if (msg.action === 'join') {
@@ -77,7 +79,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
 
   if (msg.action === 'leave') {
     send({ type: 'leave' });
-    state = { code: null, name: null, members: [] };
+    state = { code: null, name: null, members: [], settings: null };
     saveState();
     ws?.close();
   }

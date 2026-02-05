@@ -4,13 +4,7 @@
   let state = { code: null, name: null, members: [] };
   let collapsed = false;
   let currentProblem = null;
-
-  // ask background for current room state
-  chrome.runtime.sendMessage({ action: 'get-state' }, (s) => {
-    if (s) state = s;
-    render();
-    checkProblem();
-  });
+  let reportedSub = null;
 
   // --- problem detection ---
 
@@ -20,49 +14,87 @@
     return m[1].split('-').map((w) => w[0].toUpperCase() + w.slice(1)).join(' ');
   }
 
-  function checkProblem() {
-    const p = getProblem();
-    if (p === currentProblem) return;
-    currentProblem = p;
-    if (state.code) {
-      chrome.runtime.sendMessage({
-        action: 'update',
-        problem: p,
-        status: p ? 'solving' : 'idle',
-      });
+  function sendProblem(problem) {
+    if (!state.code) return;
+    chrome.runtime.sendMessage({
+      action: 'update',
+      problem: problem,
+      status: problem ? 'solving' : 'idle',
+    });
+  }
+
+  // --- submission detection (DOM-based) ---
+  // LeetCode's CSP blocks inject.js in most cases, so we detect
+  // accepted submissions by watching the page content on /submissions/ URLs
+
+  function checkAccepted() {
+    const m = location.pathname.match(/\/submissions\/(\d+)/);
+    if (!m || m[1] === reportedSub) return;
+
+    const text = document.body.innerText;
+    if (text.includes('Accepted') && text.includes('testcases passed')) {
+      reportedSub = m[1];
+      if (state.code) {
+        chrome.runtime.sendMessage({ action: 'update', status: 'accepted' });
+      }
     }
   }
 
-  // LeetCode is a SPA so poll for URL changes
-  let lastUrl = location.href;
-  setInterval(() => {
-    if (location.href !== lastUrl) {
-      lastUrl = location.href;
-      checkProblem();
-    }
-  }, 1000);
-
-  // --- submission detection ---
-  // inject a script into the page context that patches fetch
-  // so we can catch submission results from LeetCode's API
-
-  const s = document.createElement('script');
-  s.src = chrome.runtime.getURL('inject.js');
-  document.documentElement.appendChild(s);
-  s.onload = () => s.remove();
+  // also try the fetch-interception approach as a backup
+  try {
+    const s = document.createElement('script');
+    s.src = chrome.runtime.getURL('inject.js');
+    document.documentElement.appendChild(s);
+    s.onload = () => s.remove();
+  } catch {}
 
   document.addEventListener('__lct_submission', (e) => {
-    if (e.detail?.status === 'Accepted') {
+    if (e.detail?.status === 'Accepted' && state.code) {
       chrome.runtime.sendMessage({ action: 'update', status: 'accepted' });
     }
+  });
+
+  // --- poll for URL changes + check submissions ---
+
+  let lastUrl = location.href;
+  setInterval(() => {
+    const url = location.href;
+    if (url !== lastUrl) {
+      lastUrl = url;
+      reportedSub = null;
+      const p = getProblem();
+      if (p !== currentProblem) {
+        currentProblem = p;
+        sendProblem(p);
+      }
+    }
+    checkAccepted();
+  }, 1000);
+
+  // --- get initial state from background ---
+
+  chrome.runtime.sendMessage({ action: 'get-state' }, (s) => {
+    if (chrome.runtime.lastError) return;
+    if (s) state = s;
+    currentProblem = getProblem();
+    // if already in a room, immediately report what problem we're on
+    if (state.code && currentProblem) {
+      sendProblem(currentProblem);
+    }
+    render();
   });
 
   // --- listen for room state updates ---
 
   chrome.runtime.onMessage.addListener((msg) => {
     if (msg.type === 'room-state') {
+      const wasInRoom = !!state.code;
       state = msg;
       render();
+      // just joined? tell the server what problem we're on
+      if (!wasInRoom && state.code && currentProblem) {
+        sendProblem(currentProblem);
+      }
     }
   });
 

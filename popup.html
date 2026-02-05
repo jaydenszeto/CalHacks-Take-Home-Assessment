@@ -5,14 +5,50 @@
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <div class="container">
-    <h1>LeetCode Together</h1>
-    <div id="error" hidden></div>
+  <div class="head">
+    <span class="head-title" id="head-title">LeetCode Together</span>
+    <span class="head-code" id="head-code" hidden></span>
+    <button class="head-leave" id="leave-btn" hidden>Leave</button>
+  </div>
 
+  <div id="error" hidden></div>
+
+  <div class="body">
     <div id="lobby">
       <div class="field">
         <label>Display Name</label>
         <input type="text" id="username" placeholder="your name" spellcheck="false" />
+      </div>
+
+      <div class="section">
+        <label>Difficulty</label>
+        <div class="chips" id="diff-chips">
+          <span class="chip easy" data-value="easy">Easy</span>
+          <span class="chip medium" data-value="medium">Medium</span>
+          <span class="chip hard" data-value="hard">Hard</span>
+        </div>
+      </div>
+
+      <div class="section">
+        <label>Topics</label>
+        <div class="chips" id="topic-chips">
+          <span class="chip" data-value="array">Array</span>
+          <span class="chip" data-value="string">String</span>
+          <span class="chip" data-value="hash_table">Hash Table</span>
+          <span class="chip" data-value="two_pointers">Two Pointers</span>
+          <span class="chip" data-value="sliding_window">Sliding Window</span>
+          <span class="chip" data-value="binary_search">Binary Search</span>
+          <span class="chip" data-value="stack">Stack</span>
+          <span class="chip" data-value="linked_list">Linked List</span>
+          <span class="chip" data-value="tree">Tree</span>
+          <span class="chip" data-value="graph">Graph</span>
+          <span class="chip" data-value="dynamic_programming">DP</span>
+          <span class="chip" data-value="greedy">Greedy</span>
+          <span class="chip" data-value="backtracking">Backtracking</span>
+          <span class="chip" data-value="sorting">Sorting</span>
+          <span class="chip" data-value="math">Math</span>
+          <span class="chip" data-value="heap">Heap</span>
+        </div>
       </div>
 
       <button id="create-btn" class="btn primary">Create Room</button>
@@ -27,10 +63,7 @@
     </div>
 
     <div id="room" hidden>
-      <div class="room-header">
-        <span class="room-code"></span>
-        <button id="leave-btn" class="btn-small">Leave</button>
-      </div>
+      <div class="room-tags" id="room-tags" hidden></div>
       <div id="members"></div>
     </div>
   </div>
