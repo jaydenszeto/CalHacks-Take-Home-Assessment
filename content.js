@@ -212,6 +212,18 @@
   const ICON_SOLVING = '<svg width="20" height="20" viewBox="0 0 20 20"><path d="M2 10h3l2-5 3 10 2-5h6" stroke="#ffc01e" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const ICON_IDLE = '<svg width="20" height="20" viewBox="0 0 20 20"><line x1="6" y1="10" x2="14" y2="10" stroke="#555" stroke-width="2" stroke-linecap="round"/></svg>';
 
+  function formatTime(ms) {
+    if (!ms || ms < 1000) return null;
+    const s = Math.floor(ms / 1000);
+    if (s < 60) return s + 's';
+    const m = Math.floor(s / 60);
+    const rs = s % 60;
+    if (m < 60) return m + 'm ' + (rs ? rs + 's' : '');
+    const h = Math.floor(m / 60);
+    const rm = m % 60;
+    return h + 'h ' + (rm ? rm + 'm' : '');
+  }
+
   function renderPanelProblems() {
     const problems = state.settings?.problems;
     if (!problems?.length) return '';
@@ -242,7 +254,9 @@
         if (status === 'accepted') icon = ICON_ACCEPTED;
         else if (status === 'solving') icon = ICON_SOLVING;
         else icon = ICON_IDLE;
-        cells += `<span class="lct-grid-cell">${icon}</span>`;
+        const time = formatTime(m.timeSpent?.[p.titleSlug]);
+        const tooltip = time ? ` data-tooltip="${time}"` : '';
+        cells += `<span class="lct-grid-cell${time ? ' has-tooltip' : ''}"${tooltip}>${icon}</span>`;
       });
       rows += `<div class="lct-grid-row">` +
         `<span class="lct-grid-name ${you ? 'you' : ''}">${m.name}</span>` +

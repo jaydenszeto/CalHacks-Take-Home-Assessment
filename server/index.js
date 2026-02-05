@@ -53,7 +53,7 @@ function onMessage(ws, msg) {
     const settings = msg.settings || { difficulty: [], topics: [] };
     rooms.set(code, {
       settings,
-      members: new Map([[client.id, { name: msg.name, problem: null, problemSlug: null, status: 'idle', progress: {} }]]),
+      members: new Map([[client.id, { name: msg.name, problem: null, problemSlug: null, status: 'idle', progress: {}, timeSpent: {}, activeTimer: null }]]),
     });
     send(ws, { type: 'joined', code, settings });
     broadcast(code);
@@ -67,17 +67,24 @@ function onMessage(ws, msg) {
     client.name = msg.name;
     client.room = code;
 
-    // Carry over progress from previous connection with same name (reconnect)
+    // Carry over progress and timeSpent from previous connection with same name (reconnect)
     let prevProgress = {};
+    let prevTimeSpent = {};
     for (const [id, m] of room.members) {
       if (m.name === msg.name) {
         prevProgress = m.progress || {};
+        // Flush any active timer before carrying over
+        if (m.activeTimer) {
+          const elapsed = Date.now() - m.activeTimer.start;
+          m.timeSpent[m.activeTimer.slug] = (m.timeSpent[m.activeTimer.slug] || 0) + elapsed;
+        }
+        prevTimeSpent = m.timeSpent || {};
         room.members.delete(id);
         break;
       }
     }
 
-    room.members.set(client.id, { name: msg.name, problem: null, problemSlug: null, status: 'idle', progress: prevProgress });
+    room.members.set(client.id, { name: msg.name, problem: null, problemSlug: null, status: 'idle', progress: prevProgress, timeSpent: prevTimeSpent, activeTimer: null });
     send(ws, { type: 'joined', code, settings: room.settings });
     broadcast(code);
   }
@@ -96,8 +103,25 @@ function onMessage(ws, msg) {
     if (msg.problem !== undefined) member.problem = msg.problem;
     if (msg.problemSlug) member.problemSlug = msg.problemSlug;
     if (msg.status !== undefined) {
+      const slug = msg.problemSlug || member.problemSlug;
+
+      // Stop active timer if switching problem or no longer solving
+      if (member.activeTimer) {
+        const sameProblem = member.activeTimer.slug === slug;
+        const stillSolving = msg.status === 'solving';
+        if (!sameProblem || !stillSolving) {
+          const elapsed = Date.now() - member.activeTimer.start;
+          member.timeSpent[member.activeTimer.slug] = (member.timeSpent[member.activeTimer.slug] || 0) + elapsed;
+          member.activeTimer = null;
+        }
+      }
+
+      // Start timer if solving and no active timer
+      if (msg.status === 'solving' && !member.activeTimer && slug) {
+        member.activeTimer = { slug, start: Date.now() };
+      }
+
       member.status = msg.status;
-      const slug = member.problemSlug;
       if (slug) {
         if (msg.status === 'accepted') {
           member.progress[slug] = 'accepted';
@@ -117,6 +141,13 @@ function leave(ws) {
   const room = rooms.get(code);
   client.room = null;
   if (!room) return;
+  // Flush active timer before removing
+  const member = room.members.get(client.id);
+  if (member?.activeTimer) {
+    const elapsed = Date.now() - member.activeTimer.start;
+    member.timeSpent[member.activeTimer.slug] = (member.timeSpent[member.activeTimer.slug] || 0) + elapsed;
+    member.activeTimer = null;
+  }
   room.members.delete(client.id);
   if (room.members.size === 0) rooms.delete(code);
   else broadcast(code);
@@ -125,7 +156,16 @@ function leave(ws) {
 function broadcast(code) {
   const room = rooms.get(code);
   if (!room) return;
-  const members = [...room.members.values()];
+  const now = Date.now();
+  const members = [...room.members.values()].map((m) => {
+    // Compute timeSpent with active timer included
+    const timeSpent = { ...m.timeSpent };
+    if (m.activeTimer) {
+      const slug = m.activeTimer.slug;
+      timeSpent[slug] = (timeSpent[slug] || 0) + (now - m.activeTimer.start);
+    }
+    return { name: m.name, problem: m.problem, problemSlug: m.problemSlug, status: m.status, progress: m.progress, timeSpent };
+  });
   for (const [ws, c] of clients) {
     if (c.room === code) send(ws, { type: 'room-state', members, settings: room.settings });
   }
