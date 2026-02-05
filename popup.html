@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <h1>LeetCode Together</h1>
+
+    <!-- Lobby: create or join a room -->
+    <div id="lobby">
+      <div class="field">
+        <label>Display Name</label>
+        <input type="text" id="username" placeholder="your name" spellcheck="false" />
+      </div>
+
+      <button id="create-btn" class="btn primary">Create Room</button>
+
+      <div class="divider"><span>or join one</span></div>
+
+      <div class="field">
+        <label>Room Code</label>
+        <input type="text" id="room-code" placeholder="e.g. A1B2C3" spellcheck="false" />
+      </div>
+      <button id="join-btn" class="btn">Join Room</button>
+    </div>
+
+    <!-- Room view: shows members -->
+    <div id="room" hidden>
+      <div class="room-header">
+        <span class="room-code"></span>
+        <button id="leave-btn" class="btn-small">Leave</button>
+      </div>
+      <div id="members"></div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

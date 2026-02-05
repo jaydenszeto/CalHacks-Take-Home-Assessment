@@ -1,0 +1,108 @@
+/* LeetCode Together - floating panel injected on leetcode.com */
+
+#lct-panel {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 260px;
+  background: #282828;
+  border: 1px solid #3a3a3a;
+  border-radius: 10px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13px;
+  color: #eff1f6;
+  z-index: 99999;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+#lct-panel * {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* header bar */
+#lct-panel .lct-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: #1e1e1e;
+  cursor: pointer;
+  user-select: none;
+}
+
+#lct-panel .lct-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #ffa116;
+}
+
+#lct-panel .lct-chevron {
+  font-size: 10px;
+  color: #666;
+  transition: transform 0.2s;
+}
+
+#lct-panel .lct-chevron.up {
+  transform: rotate(180deg);
+}
+
+/* body */
+#lct-panel .lct-body {
+  padding: 8px 12px;
+}
+
+#lct-panel .lct-body.collapsed {
+  display: none;
+}
+
+#lct-panel .lct-empty {
+  color: #666;
+  text-align: center;
+  padding: 8px 0;
+  font-size: 12px;
+}
+
+/* member rows */
+#lct-panel .lct-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+}
+
+#lct-panel .lct-row + .lct-row {
+  border-top: 1px solid #333;
+}
+
+#lct-panel .lct-name {
+  font-weight: 500;
+  font-size: 12px;
+}
+
+#lct-panel .lct-name.you {
+  color: #ffa116;
+}
+
+#lct-panel .lct-right {
+  text-align: right;
+}
+
+#lct-panel .lct-problem {
+  font-size: 11px;
+  color: #999;
+}
+
+#lct-panel .lct-status {
+  font-size: 10px;
+}
+
+#lct-panel .lct-status.solving {
+  color: #ffc01e;
+}
+
+#lct-panel .lct-status.accepted {
+  color: #2cbb5d;
+}
