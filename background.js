@@ -182,7 +182,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
   }
 
   if (msg.action === 'update') {
-    send({ type: 'update', problem: msg.problem, status: msg.status });
+    send({ type: 'update', problem: msg.problem, problemSlug: msg.problemSlug, status: msg.status });
   }
 });
 

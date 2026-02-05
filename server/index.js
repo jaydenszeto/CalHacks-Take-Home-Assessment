@@ -53,7 +53,7 @@ function onMessage(ws, msg) {
     const settings = msg.settings || { difficulty: [], topics: [] };
     rooms.set(code, {
       settings,
-      members: new Map([[client.id, { name: msg.name, problem: null, status: 'idle' }]]),
+      members: new Map([[client.id, { name: msg.name, problem: null, problemSlug: null, status: 'idle', progress: {} }]]),
     });
     send(ws, { type: 'joined', code, settings });
     broadcast(code);
@@ -66,7 +66,18 @@ function onMessage(ws, msg) {
     leave(ws);
     client.name = msg.name;
     client.room = code;
-    room.members.set(client.id, { name: msg.name, problem: null, status: 'idle' });
+
+    // Carry over progress from previous connection with same name (reconnect)
+    let prevProgress = {};
+    for (const [id, m] of room.members) {
+      if (m.name === msg.name) {
+        prevProgress = m.progress || {};
+        room.members.delete(id);
+        break;
+      }
+    }
+
+    room.members.set(client.id, { name: msg.name, problem: null, problemSlug: null, status: 'idle', progress: prevProgress });
     send(ws, { type: 'joined', code, settings: room.settings });
     broadcast(code);
   }
@@ -83,7 +94,18 @@ function onMessage(ws, msg) {
     const member = room.members.get(client.id);
     if (!member) return;
     if (msg.problem !== undefined) member.problem = msg.problem;
-    if (msg.status !== undefined) member.status = msg.status;
+    if (msg.problemSlug) member.problemSlug = msg.problemSlug;
+    if (msg.status !== undefined) {
+      member.status = msg.status;
+      const slug = member.problemSlug;
+      if (slug) {
+        if (msg.status === 'accepted') {
+          member.progress[slug] = 'accepted';
+        } else if (msg.status === 'solving' && member.progress[slug] !== 'accepted') {
+          member.progress[slug] = 'solving';
+        }
+      }
+    }
     broadcast(client.room);
   }
 }

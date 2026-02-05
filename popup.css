@@ -319,3 +319,51 @@ body {
 .member-status.accepted { color: #2cbb5d; }
 .member-status.browsing { color: #5b8def; }
 .member-status.idle { color: #666; }
+
+/* --- Progress grid --- */
+
+.progress-grid {
+  margin-top: 4px;
+}
+
+.progress-row {
+  display: flex;
+  align-items: center;
+  padding: 7px 0;
+}
+
+.progress-row + .progress-row {
+  border-top: 1px solid #333;
+}
+
+.progress-name {
+  flex: 1;
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.progress-name.you {
+  color: #ffa116;
+}
+
+.progress-cells {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.progress-cell {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.progress-cell svg {
+  display: block;
+}

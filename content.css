@@ -2,7 +2,7 @@
   position: fixed;
   bottom: 20px;
   right: 20px;
-  width: 260px;
+  width: 280px;
   background: #282828;
   border: 1px solid #3a3a3a;
   border-radius: 10px;
@@ -26,8 +26,12 @@
   align-items: center;
   padding: 10px 14px;
   background: #1e1e1e;
-  cursor: pointer;
+  cursor: grab;
   user-select: none;
+}
+
+#lct-panel .lct-head:active {
+  cursor: grabbing;
 }
 
 #lct-panel .lct-title {
@@ -60,6 +64,8 @@
   padding: 8px 0;
   font-size: 12px;
 }
+
+/* --- Member rows (fallback when no problems) --- */
 
 #lct-panel .lct-row {
   display: flex;
@@ -159,4 +165,52 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* --- Progress grid --- */
+
+#lct-panel .lct-grid {
+  margin-top: 6px;
+}
+
+#lct-panel .lct-grid-row {
+  display: flex;
+  align-items: center;
+  padding: 5px 0;
+}
+
+#lct-panel .lct-grid-row + .lct-grid-row {
+  border-top: 1px solid #333;
+}
+
+#lct-panel .lct-grid-name {
+  flex: 1;
+  font-weight: 600;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+#lct-panel .lct-grid-name.you {
+  color: #ffa116;
+}
+
+#lct-panel .lct-grid-cells {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+#lct-panel .lct-grid-cell {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#lct-panel .lct-grid-cell svg {
+  display: block;
 }

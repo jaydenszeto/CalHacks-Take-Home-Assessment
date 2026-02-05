@@ -1,6 +1,11 @@
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => document.querySelectorAll(s);
 
+// SVG icons for progress grid
+const ICON_ACCEPTED = '<svg width="22" height="22" viewBox="0 0 20 20"><circle cx="10" cy="10" r="9" fill="#2cbb5d"/><path d="M6 10l3 3 5-5" stroke="#fff" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const ICON_SOLVING = '<svg width="22" height="22" viewBox="0 0 20 20"><path d="M2 10h3l2-5 3 10 2-5h6" stroke="#ffc01e" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const ICON_IDLE = '<svg width="22" height="22" viewBox="0 0 20 20"><line x1="6" y1="10" x2="14" y2="10" stroke="#555" stroke-width="2" stroke-linecap="round"/></svg>';
+
 // chip labels for display in room view
 const topicLabels = {};
 $$('#topic-chips .chip').forEach((el) => {
@@ -64,7 +69,7 @@ function showRoom(state) {
 
   renderTags(state.settings);
   renderProblems(state.settings?.problems);
-  renderMembers(state.members || [], state.name);
+  renderMembers(state.members || [], state.name, state.settings?.problems);
 }
 
 function showLobby() {
@@ -125,7 +130,31 @@ function renderProblems(problems) {
   });
 }
 
-function renderMembers(members, myName) {
+function renderMembers(members, myName, problems) {
+  if (problems?.length) {
+    // Progress grid view
+    $('#members').innerHTML = '<div class="progress-grid">' +
+      members.map((m) => {
+        const you = m.name === myName;
+        let cells = '';
+        problems.forEach((p) => {
+          const status = m.progress?.[p.titleSlug];
+          let icon;
+          if (status === 'accepted') icon = ICON_ACCEPTED;
+          else if (status === 'solving') icon = ICON_SOLVING;
+          else icon = ICON_IDLE;
+          cells += `<span class="progress-cell">${icon}</span>`;
+        });
+        return `<div class="progress-row">` +
+          `<span class="progress-name ${you ? 'you' : ''}">${m.name}</span>` +
+          `<span class="progress-cells">${cells}</span>` +
+          `</div>`;
+      }).join('') +
+      '</div>';
+    return;
+  }
+
+  // Fallback to original member list
   $('#members').innerHTML = members
     .map((m) => {
       const you = m.name === myName;
