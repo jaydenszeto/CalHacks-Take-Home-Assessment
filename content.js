@@ -1,7 +1,7 @@
 (function () {
   if (window !== window.top) return;
 
-  let state = { code: null, name: null, members: [], settings: null };
+  let state = { code: null, name: null, members: [], settings: null, firstSolvers: {} };
   let stateReceivedAt = 0;
   let collapsed = false;
   let currentProblem = null;
@@ -172,7 +172,7 @@
   let dragStartY = 0;
 
   panel.addEventListener('mousedown', (e) => {
-    if (!e.target.closest('.lct-head')) return;
+    if (!e.target.closest('.lct-head') || e.target.closest('.lct-leave')) return;
     isDragging = true;
     dragStartX = e.clientX;
     dragStartY = e.clientY;
@@ -213,6 +213,7 @@
   // --- SVG icons for progress grid ---
 
   const ICON_ACCEPTED = '<svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="9" fill="#2cbb5d"/><path d="M6 10l3 3 5-5" stroke="#fff" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const ICON_CROWN = '<svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="9" fill="#2cbb5d"/><path d="M5 13l1.5-5L10 10.5 13.5 8 15 13z" fill="#ffd700" stroke="#fff" stroke-width="0.5"/></svg>';
   const ICON_SOLVING = '<svg width="20" height="20" viewBox="0 0 20 20"><path d="M2 10h3l2-5 3 10 2-5h6" stroke="#ffc01e" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const ICON_IDLE = '<svg width="20" height="20" viewBox="0 0 20 20"><line x1="6" y1="10" x2="14" y2="10" stroke="#555" stroke-width="2" stroke-linecap="round"/></svg>';
 
@@ -252,9 +253,12 @@
       problems.map((p) => {
         const diff = (p.difficulty || '').toLowerCase();
         const url = `https://leetcode.com/problems/${p.titleSlug}/`;
-        return `<a class="lct-prob-row" href="${url}">` +
+        return `<div class="lct-prob-row-wrap">` +
+          `<a class="lct-prob-row" href="${url}">` +
           `<span class="lct-prob-diff ${diff}">${p.difficulty}</span>` +
-          `<span class="lct-prob-name">${p.title}</span></a>`;
+          `<span class="lct-prob-name">${p.title}</span></a>` +
+          `<button class="lct-prob-reroll" data-slug="${p.titleSlug}" title="Reroll problem">&#x27F3;</button>` +
+          `</div>`;
       }).join('') +
       '</div>';
   }
@@ -271,7 +275,7 @@
       problems.forEach((p) => {
         const status = m.progress?.[p.titleSlug];
         let icon;
-        if (status === 'accepted') icon = ICON_ACCEPTED;
+        if (status === 'accepted') icon = state.firstSolvers?.[p.titleSlug] === m.name ? ICON_CROWN : ICON_ACCEPTED;
         else if (status === 'solving') icon = ICON_SOLVING;
         else icon = ICON_IDLE;
         const baseMs = m.timeSpent?.[p.titleSlug] || 0;
@@ -324,12 +328,37 @@
       }
     }
 
+    const leaveBtn = state.code ? `<button class="lct-leave">Leave</button>` : '';
+
     panel.innerHTML = `
       <div class="lct-head">
-        <span class="lct-title">LeetCode Together</span>
-        <span class="lct-chevron ${collapsed ? 'up' : ''}">▼</span>
+        <span class="lct-title">${state.code ? 'Room ' + state.code : 'LeetCode Together'}</span>
+        <span class="lct-head-right">
+          ${leaveBtn}
+          <span class="lct-chevron ${collapsed ? 'up' : ''}">▼</span>
+        </span>
       </div>
       <div class="lct-body ${collapsed ? 'collapsed' : ''}">${body}</div>`;
+
+    const leaveBtnEl = panel.querySelector('.lct-leave');
+    if (leaveBtnEl) {
+      leaveBtnEl.addEventListener('click', (e) => {
+        e.stopPropagation();
+        chrome.runtime.sendMessage({ action: 'leave' });
+        state = { code: null, name: null, members: [], settings: null, firstSolvers: {} };
+        acceptedProblem = null;
+        reportedSub = null;
+        render();
+      });
+    }
+
+    panel.querySelectorAll('.lct-prob-reroll').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        chrome.runtime.sendMessage({ action: 'reroll', slug: btn.dataset.slug });
+      });
+    });
   }
 
   render();

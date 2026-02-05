@@ -53,6 +53,7 @@ function onMessage(ws, msg) {
     const settings = msg.settings || { difficulty: [], topics: [] };
     rooms.set(code, {
       settings,
+      firstSolvers: {},
       members: new Map([[client.id, { name: msg.name, problem: null, problemSlug: null, status: 'idle', progress: {}, timeSpent: {}, activeTimer: null }]]),
     });
     send(ws, { type: 'joined', code, settings });
@@ -125,11 +126,25 @@ function onMessage(ws, msg) {
       if (slug) {
         if (msg.status === 'accepted') {
           member.progress[slug] = 'accepted';
+          if (!room.firstSolvers[slug]) room.firstSolvers[slug] = member.name;
         } else if (msg.status === 'solving' && member.progress[slug] !== 'accepted') {
           member.progress[slug] = 'solving';
         }
       }
     }
+    broadcast(client.room);
+  }
+
+  else if (msg.type === 'update-settings') {
+    if (!client.room) return;
+    const room = rooms.get(client.room);
+    if (!room) return;
+    // Clean up firstSolvers for removed problems
+    const newSlugs = new Set((msg.settings?.problems || []).map(p => p.titleSlug));
+    for (const slug of Object.keys(room.firstSolvers)) {
+      if (!newSlugs.has(slug)) delete room.firstSolvers[slug];
+    }
+    room.settings = msg.settings;
     broadcast(client.room);
   }
 }
@@ -167,7 +182,7 @@ function broadcast(code) {
     return { name: m.name, problem: m.problem, problemSlug: m.problemSlug, status: m.status, progress: m.progress, timeSpent, activeSlug: m.activeTimer?.slug || null };
   });
   for (const [ws, c] of clients) {
-    if (c.room === code) send(ws, { type: 'room-state', members, settings: room.settings });
+    if (c.room === code) send(ws, { type: 'room-state', members, settings: room.settings, firstSolvers: room.firstSolvers });
   }
 }
 

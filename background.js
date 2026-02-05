@@ -6,7 +6,7 @@
 const SERVER = 'wss://calhacks-take-home-assessment.onrender.com';
 
 let ws = null;
-let state = { code: null, name: null, members: [], settings: null };
+let state = { code: null, name: null, members: [], settings: null, firstSolvers: {} };
 
 // --- LeetCode problem fetching ---
 
@@ -17,7 +17,7 @@ function toApiSlug(topic) {
   return topic.replace(/_/g, '-');
 }
 
-async function fetchProblems(settings) {
+async function fetchProblems(settings, count = 3, exclude = []) {
   try {
     const cookie = await chrome.cookies.get({ url: 'https://leetcode.com', name: 'csrftoken' });
     const csrf = cookie?.value || '';
@@ -77,12 +77,17 @@ async function fetchProblems(settings) {
       );
     }
 
+    if (exclude.length) {
+      const excludeSet = new Set(exclude);
+      questions = questions.filter(q => !excludeSet.has(q.titleSlug));
+    }
+
     if (questions.length === 0) return [];
 
-    // Pick up to 3 random problems
+    // Pick random problems
     const picked = [];
     const pool = [...questions];
-    const count = Math.min(3, pool.length);
+    count = Math.min(count, pool.length);
     for (let i = 0; i < count; i++) {
       const idx = Math.floor(Math.random() * pool.length);
       picked.push(pool.splice(idx, 1)[0]);
@@ -137,6 +142,7 @@ function connectWS(then) {
     } else if (msg.type === 'room-state') {
       state.members = msg.members;
       if (msg.settings) state.settings = msg.settings;
+      if (msg.firstSolvers) state.firstSolvers = msg.firstSolvers;
       saveState();
     } else if (msg.type === 'error') {
       sendError(msg.message);
@@ -163,7 +169,8 @@ chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
   if (msg.action === 'create') {
     state.name = msg.name;
     const settings = msg.settings || { difficulty: [], topics: [] };
-    fetchProblems(settings).then((problems) => {
+    const count = settings.count || 3;
+    fetchProblems(settings, count).then((problems) => {
       settings.problems = problems;
       connectWS(() => send({ type: 'create', name: msg.name, settings }));
     });
@@ -176,13 +183,26 @@ chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
 
   if (msg.action === 'leave') {
     send({ type: 'leave' });
-    state = { code: null, name: null, members: [], settings: null };
+    state = { code: null, name: null, members: [], settings: null, firstSolvers: {} };
     saveState();
     ws?.close();
   }
 
   if (msg.action === 'update') {
     send({ type: 'update', problem: msg.problem, problemSlug: msg.problemSlug, status: msg.status });
+  }
+
+  if (msg.action === 'reroll') {
+    const problems = state.settings?.problems || [];
+    const idx = problems.findIndex(p => p.titleSlug === msg.slug);
+    if (idx === -1) return;
+    const exclude = problems.map(p => p.titleSlug).filter(s => s !== msg.slug);
+    fetchProblems(state.settings, 1, exclude).then((picked) => {
+      if (!picked.length) return;
+      state.settings.problems[idx] = picked[0];
+      send({ type: 'update-settings', settings: state.settings });
+      saveState();
+    });
   }
 });
 
