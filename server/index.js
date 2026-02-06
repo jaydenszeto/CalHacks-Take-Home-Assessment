@@ -219,4 +219,11 @@ function makeCode() {
 
 server.listen(process.env.PORT || 3000, () => {
   console.log('listening on', process.env.PORT || 3000);
+
+  // Keep Render from spinning down the free-tier instance
+  if (process.env.RENDER_EXTERNAL_URL) {
+    setInterval(() => {
+      http.get(process.env.RENDER_EXTERNAL_URL, () => {});
+    }, 14 * 60 * 1000); // every 14 minutes
+  }
 });
