@@ -171,9 +171,12 @@ chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
     state.name = msg.name;
     const settings = msg.settings || { difficulty: [], topics: [] };
     const count = settings.count || 3;
-    fetchProblems(settings, count).then((problems) => {
+    // Fetch problems and ensure WS connection in parallel
+    const problemsReady = fetchProblems(settings, count);
+    const wsReady = new Promise((resolve) => connectWS(resolve));
+    Promise.all([problemsReady, wsReady]).then(([problems]) => {
       settings.problems = problems;
-      connectWS(() => send({ type: 'create', name: msg.name, settings }));
+      send({ type: 'create', name: msg.name, settings });
     });
   }
 
@@ -217,5 +220,8 @@ chrome.storage.local.get('roomState', ({ roomState }) => {
   if (roomState?.code) {
     state = roomState;
     connectWS(() => send({ type: 'join', name: state.name, code: state.code }));
+  } else {
+    // Pre-connect so the server is warm when the user clicks Create/Join
+    connectWS(() => {});
   }
 });
