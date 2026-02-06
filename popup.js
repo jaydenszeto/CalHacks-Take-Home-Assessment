@@ -98,7 +98,7 @@ function showRoom(state) {
   stateReceivedAt = Date.now();
 
   renderTags(state.settings);
-  renderProblems(state.settings?.problems);
+  renderProblems(state.settings?.problems, state.members || [], state.rerolledSlots || []);
   renderMembers(state.members || [], state.name, state.settings?.problems, state.firstSolvers);
 }
 
@@ -154,21 +154,24 @@ function renderTags(settings) {
   el.hidden = !html;
 }
 
-function renderProblems(problems) {
+function renderProblems(problems, members, rerolledSlots) {
   const el = $('#room-problems');
   if (!problems?.length) { el.hidden = true; return; }
 
   el.innerHTML = '<div class="problems-title">Problems</div>' +
-    problems.map((p) => {
+    problems.map((p, i) => {
       const diff = (p.difficulty || '').toLowerCase();
       const url = `https://leetcode.com/problems/${p.titleSlug}/`;
+      const hasProgress = members.some(m => m.progress?.[p.titleSlug]);
+      const alreadyRerolled = rerolledSlots.includes(i);
+      const disabled = hasProgress || alreadyRerolled;
       return `
       <div class="problem-row-wrap">
         <a class="problem-row" href="${url}" data-url="${url}">
           <span class="problem-diff ${diff}">${p.difficulty}</span>
           <span class="problem-name">${p.title}</span>
         </a>
-        <button class="problem-reroll" data-slug="${p.titleSlug}" title="Reroll problem">&#x27F3;</button>
+        <button class="problem-reroll${disabled ? ' disabled' : ''}" data-slug="${p.titleSlug}" title="${alreadyRerolled ? 'Already rerolled' : hasProgress ? 'Someone started this problem' : 'Reroll problem'}"${disabled ? ' disabled' : ''}>&#x27F3;</button>
       </div>`;
     }).join('');
 

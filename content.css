@@ -214,9 +214,14 @@
   font-family: inherit;
 }
 
-#lct-panel .lct-prob-reroll:hover {
+#lct-panel .lct-prob-reroll:hover:not(:disabled) {
   color: #ffa116;
   background: rgba(255, 161, 22, 0.1);
+}
+
+#lct-panel .lct-prob-reroll:disabled {
+  color: #3a3a3a;
+  cursor: not-allowed;
 }
 
 /* --- Progress grid --- */

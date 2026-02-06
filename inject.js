@@ -1,13 +1,3 @@
-// runs in the page context (not the extension sandbox)
-// patches fetch to detect REAL submissions only (not "Run Code")
-//
-// LeetCode flow:
-//   Run Code  → POST /interpret_solution/ → polls /check → result
-//   Submit    → POST /submit/             → polls /check → result
-//
-// We track the submission_id from /submit/ and only fire
-// the event when the matching /check comes back accepted.
-
 (function () {
   const _fetch = window.fetch;
   let submitId = null;

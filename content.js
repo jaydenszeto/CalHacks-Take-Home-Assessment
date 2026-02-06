@@ -1,7 +1,7 @@
 (function () {
   if (window !== window.top) return;
 
-  let state = { code: null, name: null, members: [], settings: null, firstSolvers: {} };
+  let state = { code: null, name: null, members: [], settings: null, firstSolvers: {}, rerolledSlots: [] };
   let stateReceivedAt = 0;
   let collapsed = false;
   let currentProblem = null;
@@ -248,16 +248,21 @@
   function renderPanelProblems() {
     const problems = state.settings?.problems;
     if (!problems?.length) return '';
+    const members = state.members || [];
+    const rerolledSlots = state.rerolledSlots || [];
     return '<div class="lct-problems">' +
       '<div class="lct-problems-title">Problems</div>' +
-      problems.map((p) => {
+      problems.map((p, i) => {
         const diff = (p.difficulty || '').toLowerCase();
         const url = `https://leetcode.com/problems/${p.titleSlug}/`;
+        const hasProgress = members.some(m => m.progress?.[p.titleSlug]);
+        const alreadyRerolled = rerolledSlots.includes(i);
+        const disabled = hasProgress || alreadyRerolled;
         return `<div class="lct-prob-row-wrap">` +
           `<a class="lct-prob-row" href="${url}">` +
           `<span class="lct-prob-diff ${diff}">${p.difficulty}</span>` +
           `<span class="lct-prob-name">${p.title}</span></a>` +
-          `<button class="lct-prob-reroll" data-slug="${p.titleSlug}" title="Reroll problem">&#x27F3;</button>` +
+          `<button class="lct-prob-reroll${disabled ? ' disabled' : ''}" data-slug="${p.titleSlug}" title="${alreadyRerolled ? 'Already rerolled' : hasProgress ? 'Someone started this problem' : 'Reroll problem'}"${disabled ? ' disabled' : ''}>&#x27F3;</button>` +
           `</div>`;
       }).join('') +
       '</div>';
@@ -345,7 +350,7 @@
       leaveBtnEl.addEventListener('click', (e) => {
         e.stopPropagation();
         chrome.runtime.sendMessage({ action: 'leave' });
-        state = { code: null, name: null, members: [], settings: null, firstSolvers: {} };
+        state = { code: null, name: null, members: [], settings: null, firstSolvers: {}, rerolledSlots: [] };
         acceptedProblem = null;
         reportedSub = null;
         render();

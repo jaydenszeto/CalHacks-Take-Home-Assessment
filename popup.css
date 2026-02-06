@@ -338,9 +338,14 @@ body {
   line-height: 1;
 }
 
-.problem-reroll:hover {
+.problem-reroll:hover:not(:disabled) {
   color: #ffa116;
   background: rgba(255, 161, 22, 0.1);
+}
+
+.problem-reroll:disabled {
+  color: #3a3a3a;
+  cursor: not-allowed;
 }
 
 /* --- Member rows (same layout as the injected panel) --- */

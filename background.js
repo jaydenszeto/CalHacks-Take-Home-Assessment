@@ -6,7 +6,7 @@
 const SERVER = 'wss://calhacks-take-home-assessment.onrender.com';
 
 let ws = null;
-let state = { code: null, name: null, members: [], settings: null, firstSolvers: {} };
+let state = { code: null, name: null, members: [], settings: null, firstSolvers: {}, rerolledSlots: [] };
 
 // --- LeetCode problem fetching ---
 
@@ -143,6 +143,7 @@ function connectWS(then) {
       state.members = msg.members;
       if (msg.settings) state.settings = msg.settings;
       if (msg.firstSolvers) state.firstSolvers = msg.firstSolvers;
+      if (msg.rerolledSlots) state.rerolledSlots = msg.rerolledSlots;
       saveState();
     } else if (msg.type === 'error') {
       sendError(msg.message);
@@ -183,7 +184,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
 
   if (msg.action === 'leave') {
     send({ type: 'leave' });
-    state = { code: null, name: null, members: [], settings: null, firstSolvers: {} };
+    state = { code: null, name: null, members: [], settings: null, firstSolvers: {}, rerolledSlots: [] };
     saveState();
     ws?.close();
   }
@@ -196,11 +197,16 @@ chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
     const problems = state.settings?.problems || [];
     const idx = problems.findIndex(p => p.titleSlug === msg.slug);
     if (idx === -1) return;
+    // Block if slot already rerolled
+    if (state.rerolledSlots.includes(idx)) return;
+    // Block if any member has progress on this problem
+    const hasProgress = (state.members || []).some(m => m.progress?.[msg.slug]);
+    if (hasProgress) return;
     const exclude = problems.map(p => p.titleSlug).filter(s => s !== msg.slug);
     fetchProblems(state.settings, 1, exclude).then((picked) => {
       if (!picked.length) return;
       state.settings.problems[idx] = picked[0];
-      send({ type: 'update-settings', settings: state.settings });
+      send({ type: 'update-settings', settings: state.settings, rerolledSlot: idx });
       saveState();
     });
   }

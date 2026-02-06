@@ -54,6 +54,7 @@ function onMessage(ws, msg) {
     rooms.set(code, {
       settings,
       firstSolvers: {},
+      rerolledSlots: [],
       members: new Map([[client.id, { name: msg.name, problem: null, problemSlug: null, status: 'idle', progress: {}, timeSpent: {}, activeTimer: null }]]),
     });
     send(ws, { type: 'joined', code, settings });
@@ -139,6 +140,22 @@ function onMessage(ws, msg) {
     if (!client.room) return;
     const room = rooms.get(client.room);
     if (!room) return;
+
+    // If this is a reroll, validate it
+    if (msg.rerolledSlot !== undefined) {
+      const idx = msg.rerolledSlot;
+      // Block if slot already rerolled
+      if (room.rerolledSlots.includes(idx)) return;
+      // Block if any member has progress on the old problem at this slot
+      const oldSlug = room.settings?.problems?.[idx]?.titleSlug;
+      if (oldSlug) {
+        for (const m of room.members.values()) {
+          if (m.progress[oldSlug]) return;
+        }
+      }
+      room.rerolledSlots.push(idx);
+    }
+
     // Clean up firstSolvers for removed problems
     const newSlugs = new Set((msg.settings?.problems || []).map(p => p.titleSlug));
     for (const slug of Object.keys(room.firstSolvers)) {
@@ -182,7 +199,7 @@ function broadcast(code) {
     return { name: m.name, problem: m.problem, problemSlug: m.problemSlug, status: m.status, progress: m.progress, timeSpent, activeSlug: m.activeTimer?.slug || null };
   });
   for (const [ws, c] of clients) {
-    if (c.room === code) send(ws, { type: 'room-state', members, settings: room.settings, firstSolvers: room.firstSolvers });
+    if (c.room === code) send(ws, { type: 'room-state', members, settings: room.settings, firstSolvers: room.firstSolvers, rerolledSlots: room.rerolledSlots });
   }
 }
 
